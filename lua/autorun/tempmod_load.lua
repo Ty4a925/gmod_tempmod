@@ -3,6 +3,7 @@ AddCSLuaFile("tempmod/sh_init.lua")
 include("tempmod/sh_init.lua")
 
 if SERVER then
+    resource.AddWorkshop("3259220540")
     include("tempmod/sv_init.lua")
 else
     include("tempmod/cl_init.lua")
