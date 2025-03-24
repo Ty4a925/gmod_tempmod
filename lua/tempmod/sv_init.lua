@@ -73,7 +73,7 @@ function meta:SetTemperature(num)
 end
 
 hook.Add("PlayerSpawnedProp", "PropTemperatureSpawn", function(pl, mdl, ent)
-    if ent:IsTemperatureAvaiable() and ent:IsTemperatureAvaiable() then
+    if ent:IsTemperatureAvaiable() then
         ent:SetTemperature(normtemp:GetInt())
         if ent:GetMaterialType() == MAT_METAL then ent:SetNW2Bool("IsMetalObject",true) end
     end
