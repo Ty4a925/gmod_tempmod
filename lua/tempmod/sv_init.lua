@@ -1,27 +1,23 @@
 local meta = FindMetaTable("Entity")
 
-local normtemp = CreateConVar("tempmod_normal_temperature", "20", {FCVAR_SERVER_CAN_EXECUTE, FCVAR_ARCHIVE}, "Normal temperature for objects")
-local damageprops = CreateConVar("tempmod_damageprops", "1", {FCVAR_SERVER_CAN_EXECUTE, FCVAR_ARCHIVE}, "Damage props by temperature")
-local tempfordamage = CreateConVar("tempmod_tempfordamage", "100", {FCVAR_SERVER_CAN_EXECUTE, FCVAR_ARCHIVE}, "If the temperature is equal to this number then the prop will break")
-local tempspread = CreateConVar("tempmod_tempspread", "1", {FCVAR_SERVER_CAN_EXECUTE, FCVAR_ARCHIVE}, "Temperature spread")
-local spreadvalue = CreateConVar("tempmod_tempspread_value", "0.10", {FCVAR_SERVER_CAN_EXECUTE, FCVAR_ARCHIVE}, "Temperature spread value")
-local tempdecrease = CreateConVar("tempmod_tempdecrease_value", "1.0", {FCVAR_SERVER_CAN_EXECUTE, FCVAR_ARCHIVE}, "Temperature decrease value")
-local increasevalue = CreateConVar("tempmod_tempincrease_value", "5.0", {FCVAR_SERVER_CAN_EXECUTE, FCVAR_ARCHIVE}, "Temperature increase value")
-local decreasetime = CreateConVar("tempmod_tempdecrease_updatetime", "1.0", {FCVAR_SERVER_CAN_EXECUTE, FCVAR_ARCHIVE}, "Temperature increase value")
-local spreadtime = CreateConVar("tempmod_tempspread_updatetime", "1.0", {FCVAR_SERVER_CAN_EXECUTE, FCVAR_ARCHIVE}, "Temperature increase value")
+local flags = {FCVAR_SERVER_CAN_EXECUTE, FCVAR_ARCHIVE}
+local normtemp = CreateConVar("tempmod_normal_temperature", "20", flags, "Normal temperature for objects")
+local damageprops = CreateConVar("tempmod_damageprops", "1", flags, "Damage props by temperature")
+local tempfordamage = CreateConVar("tempmod_tempfordamage", "100", flags, "If the temperature is equal to this number then the prop will break")
+local tempspread = CreateConVar("tempmod_tempspread", "1", flags, "Temperature spread")
+local spreadvalue = CreateConVar("tempmod_tempspread_value", "0.10", flags, "Temperature spread value")
+local tempdecrease = CreateConVar("tempmod_tempdecrease_value", "1.0", flags, "Temperature decrease value")
+local increasevalue = CreateConVar("tempmod_tempincrease_value", "5.0", flags, "Temperature increase value")
+local decreasetime = CreateConVar("tempmod_tempdecrease_updatetime", "1.0", flags, "Temperature increase value")
+local spreadtime = CreateConVar("tempmod_tempspread_updatetime", "1.0", flags, "Temperature increase value")
 
 local function IsMetalObject(ent)
-    if not IsValid(ent) then return false end
-    local entmat = ent:GetMaterialType()
-    return entmat == MAT_VENT or entmat == MAT_METAL
+    local material = ent:GetMaterialType()
+    return material == MAT_VENT or material == MAT_METAL
 end
 
 local function UpdateTemperatureMaterial(ent)
-    if not IsValid(ent) then return end
-    local entmat = ent:GetMaterialType()
-    local temp = ent:GetTemperature()
-
-    if temp >= 1000 then
+    if ent:GetTemperature() >= 1000 then
         if IsMetalObject(ent) then
             ent:SetMaterial("temperaturemod/metal/metalwhite.vtf")
         end
@@ -31,7 +27,6 @@ local function UpdateTemperatureMaterial(ent)
 end
 
 local function UpdateTemperatureColor(ent)
-    if not IsValid(ent) or not ent.GetMaterialType then return end
     local entmat = ent:GetMaterialType()
     local temp = ent:GetTemperature()
 
@@ -51,19 +46,16 @@ local function UpdateTemperatureColor(ent)
 end
 
 function meta:SetTemperature(num)
-    if not IsValid(self) then return end
     self:SetNW2Int("Temperature", num)
 
-    if not self.GetMaterialType then return end
-    local entmat = self:GetMaterialType()
-    local temp = self:GetTemperature()
-
-    if damageprops:GetBool() and temp >= tempfordamage:GetInt() then
+    if damageprops:GetBool() and num >= tempfordamage:GetInt() then
         self:TakeDamage(math.min(self:Health() - 15, 0))
     end
 
     if not vFireInstalled then
-        if entmat == MAT_WOOD and temp >= 300 and self:WaterLevel() < 2 then
+        local material = self:GetMaterialType()
+
+        if material == MAT_WOOD and temp >= 300 and self:WaterLevel() < 2 then
             self:Ignite(60 * temp)
         end
     end
@@ -75,7 +67,10 @@ end
 hook.Add("PlayerSpawnedProp", "PropTemperatureSpawn", function(pl, mdl, ent)
     if ent:IsTemperatureAvaiable() then
         ent:SetTemperature(normtemp:GetInt())
-        if ent:GetMaterialType() == MAT_METAL then ent:SetNW2Bool("IsMetalObject",true) end
+
+        if ent:GetMaterialType() == MAT_METAL then
+            ent:SetNW2Bool("IsMetalObject", true)
+        end
     end
 end)
 
@@ -156,25 +151,23 @@ if SERVER then
 end
 
 hook.Add("EntityTakeDamage", "TemperatureByDamage", function(target, dmginfo)
-    if not IsValid(target) or not target:IsTemperatureAvaiable() then return end
+    if not target:IsTemperatureAvaiable() then return end
 
     local damagetype = dmginfo:GetDamageType()
-    local damage = dmginfo:GetDamage()
 
     if damagetype == DMG_BURN then
-        target:SetTemperature(target:GetTemperature() + damage * 0.5)
+        target:SetTemperature(target:GetTemperature() + dmginfo:GetDamage() * 0.5)
     elseif damagetype == DMG_BLAST then
-        target:SetTemperature(target:GetTemperature() + math.min(damage, 100))
+        target:SetTemperature(target:GetTemperature() + math.min(dmginfo:GetDamage(), 100))
     end
 end)
 
 concommand.Add("set_temp", function(ply, cmd, args)
-    local tr = ply:GetEyeTrace()
-    if not tr.Hit then return end
+    local ent = ply:GetEyeTrace().Entity
 
-    local ent = tr.Entity
     if IsValid(ent) and ent:IsTemperatureAvaiable() then
         local temp = tonumber(args[1])
+
         if temp then
             ent:SetTemperature(temp)
         end
@@ -182,14 +175,12 @@ concommand.Add("set_temp", function(ply, cmd, args)
 end)
 
 concommand.Add("get_temp", function(ply, cmd, args)
-    local tr = ply:GetEyeTrace()
-    if not tr.Hit then return end
+    local ent = ply:GetEyeTrace().Entity
 
-    local ent = tr.Entity
     if IsValid(ent) and ent:IsTemperatureAvaiable() then
         local temp = ent:GetTemperature()
         ply:ChatPrint(ent:GetClass() .. " Temperature")
         ply:ChatPrint("- " .. temp .. " Celsius")
-        ply:ChatPrint("- " .. tostring(temp * 9 / 5 + 32) .. " Fahrenheit")
+        ply:ChatPrint("- " .. math.floor(temp * 9 / 5 + 32) .. " Fahrenheit")
     end
 end)
