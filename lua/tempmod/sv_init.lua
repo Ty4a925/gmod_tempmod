@@ -81,6 +81,14 @@ timer.Create("TemperatureMod_Decrease", decreasetime:GetInt(), 0, function()
 
             if temp > normtemp:GetInt() then
                 local decreasetemp = math.max(ent:WaterLevel() >= 1 and temp * 0.25 or 1, 1)
+
+                if decreasetemp > 100 then
+                    local effect = EffectData()
+                    effect:SetOrigin(ent:GetPos())
+                    effect:SetScale(5)
+                    util.Effect("hot_metal", effect)
+                end
+
                 ent:SetTemperature(temp - tempdecrease:GetInt() * decreasetemp)
             end
         end

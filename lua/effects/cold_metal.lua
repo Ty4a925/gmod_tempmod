@@ -9,38 +9,40 @@ function EFFECT:Init(data)
 
 	local emitter = ParticleEmitter(self.StartPos)
 
-	for i = 1, 15 do
-		local particle = emitter:Add("particle/smokesprites_0004", self.StartPos)
-
-		particle:SetVelocity((self.Dir + VectorRand(-50, 50) * 0.5) * math.Rand(0, 1) * 30)
+	for i = 1, data:GetScale() do
+		for i = 1, 15 do
+			local particle = emitter:Add("particle/smokesprites_0004", self.StartPos)
+	
+			particle:SetVelocity((self.Dir + VectorRand(-50, 50) * 0.5) * math.Rand(0, 1) * 30)
+			particle:SetDieTime(math.Rand(0.25, 1))
+			particle:SetStartAlpha(25)
+			particle:SetStartSize(math.Rand(5, 30))
+			particle:SetEndSize(math.Rand(5, 30))
+			particle:SetRoll(math.random(-1, 1))
+			particle:SetRollDelta(math.random(0, 1))
+			particle:SetGravity(-self.Gravity)
+			particle:SetColor(190, 190, 255)
+			particle:SetCollide(true)
+			particle:SetAirResistance(600)
+			particle:SetVelocityScale(true)
+			particle:SetCollide(true)
+		end
+	
+		local particle = emitter:Add("sprites/heatwave", self.StartPos)
+	
+		particle:SetVelocity((self.Dir + VectorRand() * 0.5) * 10)
 		particle:SetDieTime(math.Rand(0.25, 1))
-		particle:SetStartAlpha(25)
-		particle:SetStartSize(math.Rand(5, 30))
-		particle:SetEndSize(math.Rand(5, 30))
-		particle:SetRoll(math.random(-1, 1))
-		particle:SetRollDelta(math.random(0, 1))
-		particle:SetGravity(-self.Gravity)
-		particle:SetColor(190, 190, 255)
-		particle:SetCollide(true)
+		particle:SetStartAlpha(math.random(1, 10))
+		particle:SetStartSize(20)
+		particle:SetEndSize(1)
+		particle:SetRoll(math.Rand(-360, 360))
+		particle:SetRollDelta(math.Rand(-1, 1))
 		particle:SetAirResistance(600)
 		particle:SetVelocityScale(true)
-		particle:SetCollide(true)
+		particle:SetCollide(false)
+	
+		emitter:Finish()
 	end
-
-	local particle = emitter:Add("sprites/heatwave", self.StartPos)
-
-	particle:SetVelocity((self.Dir + VectorRand() * 0.5) * 10)
-	particle:SetDieTime(math.Rand(0.25, 1))
-	particle:SetStartAlpha(math.random(1, 10))
-	particle:SetStartSize(20)
-	particle:SetEndSize(1)
-	particle:SetRoll(math.Rand(-360, 360))
-	particle:SetRollDelta(math.Rand(-1, 1))
-	particle:SetAirResistance(600)
-	particle:SetVelocityScale(true)
-	particle:SetCollide(false)
-
-	emitter:Finish()
 end
 
 function EFFECT:Think()
