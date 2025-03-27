@@ -4,6 +4,12 @@ function meta:IsTemperatureAvaiable()
     return self:GetClass() == "prop_physics"
 end
 
-function meta:GetTemperature()
-    return self:GetNW2Int("Temperature", 0)
+if SERVER then
+    function meta:GetTemperature()
+        return self:GetTable().Temperature or 0
+    end
+else
+    function meta:GetTemperature()
+        return self:GetNW2Int("Temperature", 0)
+    end
 end

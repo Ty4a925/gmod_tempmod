@@ -19,8 +19,6 @@ hook.Add("PopulateToolMenu", "TemperatureModSettings", function()
         panel:Help("#tempmod.tempmod_valuestitle")
 		panel:NumSlider("#tempmod.tempmod_decreasevalue", "tempmod_tempdecrease_value", 0, 50, 0)
         panel:ControlHelp("#tempmod.tempmod_decreasevaluedesc")
-        panel:NumSlider("#tempmod.tempmod_increasevalue", "tempmod_tempincrease_value", 3, 50, 1)
-        panel:ControlHelp("#tempmod.tempmod_increasevaluedesc")
         panel:NumSlider("#tempmod.tempmod_spreadvalue", "tempmod_tempspread_value", 0.05, 0.1, 2)
         panel:ControlHelp("#tempmod.tempmod_spreadvaluedesc")
 

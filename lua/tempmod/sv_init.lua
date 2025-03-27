@@ -5,11 +5,10 @@ local normtemp = CreateConVar("tempmod_normal_temperature", "20", flags, "Normal
 local damageprops = CreateConVar("tempmod_damageprops", "1", flags, "Damage props by temperature")
 local tempfordamage = CreateConVar("tempmod_tempfordamage", "100", flags, "If the temperature is equal to this number then the prop will break")
 local tempspread = CreateConVar("tempmod_tempspread", "1", flags, "Temperature spread")
-local spreadvalue = CreateConVar("tempmod_tempspread_value", "0.10", flags, "Temperature spread value")
-local tempdecrease = CreateConVar("tempmod_tempdecrease_value", "1.0", flags, "Temperature decrease value")
-local increasevalue = CreateConVar("tempmod_tempincrease_value", "5.0", flags, "Temperature increase value")
-local decreasetime = CreateConVar("tempmod_tempdecrease_updatetime", "1.0", flags, "Temperature increase value")
-local spreadtime = CreateConVar("tempmod_tempspread_updatetime", "1.0", flags, "Temperature increase value")
+local spreadvalue = CreateConVar("tempmod_tempspread_value", "0.1", flags, "Temperature spread value")
+local tempdecrease = CreateConVar("tempmod_tempdecrease_value", "1", flags, "Temperature decrease value")
+local decreasetime = CreateConVar("tempmod_tempdecrease_updatetime", "1", flags, "Temperature increase value")
+local spreadtime = CreateConVar("tempmod_tempspread_updatetime", "1", flags, "Temperature increase value")
 
 local function IsMetalObject(ent)
     local material = ent:GetMaterialType()
@@ -46,6 +45,7 @@ local function UpdateTemperatureColor(ent)
 end
 
 function meta:SetTemperature(num)
+    self.Temperature = num
     self:SetNW2Int("Temperature", num)
 
     if damageprops:GetBool() and num >= tempfordamage:GetInt() then
@@ -74,91 +74,67 @@ hook.Add("PlayerSpawnedProp", "PropTemperatureSpawn", function(pl, mdl, ent)
     end
 end)
 
-local LastUpdate = CurTime()
-local LastDamageTime = CurTime()
-local LastSpreadUpdate = CurTime()
+timer.Create("TemperatureMod_Decrease", decreasetime:GetInt(), 0, function()
+    for _, ent in ents.Iterator() do
+        if ent:IsTemperatureAvaiable() then
+            local temp = ent:GetTemperature()
 
-if SERVER then
-    hook.Add("Think", "PropTemperatureLogic", function()
-        local curTime = CurTime()
+            if temp > normtemp:GetInt() then
+                local decreasetemp = math.max(ent:WaterLevel() >= 1 and temp * 0.25 or 1, 1)
+                ent:SetTemperature(temp - tempdecrease:GetInt() * decreasetemp)
+            end
+        end
+    end
+end)
 
-        if not LastUpdate or curTime - LastUpdate > decreasetime:GetInt() and tempdecrease:GetInt() > 0 then
-            for _, ent in ents.Iterator() do
-                if ent:IsTemperatureAvaiable() then
-                    local temp = ent:GetTemperature()
+timer.Create("TemperatureMod_Spread", spreadtime:GetInt(), 0, function()
+    if not tempspread:GetBool() then return end
 
-                    local num = 0
-                    if ent:WaterLevel() > 2 then num = 10 else num = 1 end
-                    
-                    if temp > normtemp:GetInt() then
-                        ent:SetTemperature(temp - tempdecrease:GetInt()*num)
-                    end
-                    LastUpdate = curTime + decreasetime:GetInt()
+    for _, ent in ents.Iterator() do
+        if not ent:IsTemperatureAvaiable() then continue end
+
+        for _, nearent in ipairs(ents.FindInSphere(ent:GetPos(), 75)) do
+            if nearent:IsTemperatureAvaiable() and nearent ~= ent then
+                local temp1 = ent:GetTemperature()
+                local temp2 = nearent:GetTemperature()
+                if temp1 == temp2 then continue end
+
+                local temp3 = temp1 - temp2
+
+                if temp3 ~= 0 then
+                    local amount = temp3 * spreadvalue:GetFloat() / 2
+                    ent:SetTemperature(temp1 - amount)
+                    nearent:SetTemperature(temp2 + amount)
                 end
             end
         end
+    end
+end)
 
-        if tempspread:GetBool() then
-            if not LastSpreadUpdate or curTime - LastSpreadUpdate > spreadtime:GetInt() then
-                for _, ent in ents.Iterator() do
-                    if ent:IsTemperatureAvaiable() then
-                        local entities = ents.FindInSphere(ent:GetPos(), 75 )
-                        for _, nearbyEnt in ipairs(entities) do
-                            if nearbyEnt:IsTemperatureAvaiable() and nearbyEnt ~= ent then
-                                local temp1 = ent:GetTemperature()
-                                local temp2 = nearbyEnt:GetTemperature()
-                                local temp3 = temp1 - temp2
+timer.Create("TeamperatureMod_Damage", 1, 0, function()
+    for _, ply in player.Iterator() do
+        if not ply:Alive() then continue end
 
-                                if temp3 ~= 0 then
-                                    local spreadvalue = GetConVarNumber("tempmod_tempspread_value")
-                                    local amount = temp3 * spreadvalue/2
-                                    ent:SetTemperature(temp1 - amount)
-                                    nearbyEnt:SetTemperature(temp2 + amount)
-                                end
-                            end
-                        end
-                    end
-                end
-                LastSpreadUpdate = curTime + spreadtime:GetInt()
+        for _, ent in ipairs(ents.FindInSphere(ply:GetPos(), 65)) do
+            if ent:IsTemperatureAvaiable() and ent:GetTemperature() >= 75 then
+                local dmg = DamageInfo()
+                dmg:SetDamage((ent:GetTemperature() - 50) / 10)
+                dmg:SetAttacker(ent)
+                dmg:SetInflictor(ent)
+                dmg:SetDamageType(DMG_BURN)
+                ply:TakeDamageInfo(dmg)
             end
         end
-
-        if not LastDamageTime or curTime - LastDamageTime > 1 then
-            for _, ply in player.Iterator() do
-                if IsValid(ply) then
-                    if ply:Health() > 0 then
-                        local entities = ents.FindInSphere(ply:GetPos(),65)
-
-                        for _, ent in ipairs(entities) do
-                            if IsValid(ent) and ent:IsTemperatureAvaiable() and ent:GetTemperature() >= 50 then
-                                local dmg = DamageInfo()
-                                dmg:SetDamage((ent:GetTemperature() - 50) / 10)
-                                dmg:SetAttacker(ent)
-                                dmg:SetInflictor(ent)
-                                dmg:SetDamageType(DMG_BURN)
-
-                                ply:TakeDamageInfo(dmg)
-
-                                LastDamageTime = curTime + 1
-                                break
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end)
-end
+    end
+end)
 
 hook.Add("EntityTakeDamage", "TemperatureByDamage", function(target, dmginfo)
     if not target:IsTemperatureAvaiable() then return end
 
     local damagetype = dmginfo:GetDamageType()
 
-    if damagetype == DMG_BURN then
+    if damagetype == DMG_BURN or damagetype == DMG_BLAST then
         target:SetTemperature(target:GetTemperature() + dmginfo:GetDamage() * 0.5)
-    elseif damagetype == DMG_BLAST then
-        target:SetTemperature(target:GetTemperature() + math.min(dmginfo:GetDamage(), 100))
     end
 end)
 
