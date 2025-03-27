@@ -31,6 +31,8 @@ function TOOL:Reload(trace)
     if IsValid(ent) then
         if CLIENT then return true end
         ent:SetTemperature(normal_temp:GetInt())
+
+        return true
     end
 
     return false
