@@ -55,8 +55,8 @@ function meta:SetTemperature(num)
     if not vFireInstalled then
         local material = self:GetMaterialType()
 
-        if material == MAT_WOOD and self:GetTemperature() >= 300 and self:WaterLevel() < 2 then
-            self:Ignite(60 * temp)
+        if material == MAT_WOOD and num >= 300 and self:WaterLevel() < 2 then
+            self:Ignite(60 * num)
         end
     end
 
