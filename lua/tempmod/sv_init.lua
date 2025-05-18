@@ -44,6 +44,12 @@ local function UpdateTemperatureColor(ent)
     end
 end
 
+duplicator.RegisterEntityModifier("Tempmod_Temperature", function(ply, ent, data)
+    if ent:IsTemperatureAvaiable() and data.Temperature and data.Temperature == data.Temperature then
+        ent:SetTemperature(data.Temperature)
+    end
+end)
+
 function meta:SetTemperature(num)
     self.Temperature = num
     self:SetNW2Int("Temperature", num)
@@ -62,15 +68,24 @@ function meta:SetTemperature(num)
 
     UpdateTemperatureMaterial(self)
     UpdateTemperatureColor(self)
+
+    --Duplictor/saves support
+    duplicator.StoreEntityModifier(self, "Tempmod_Temperature", {Temperature = num})
 end
 
-hook.Add("PlayerSpawnedProp", "PropTemperatureSpawn", function(pl, mdl, ent)
-    if ent:IsTemperatureAvaiable() then
-        ent:SetTemperature(normtemp:GetInt())
+hook.Add("OnEntityCreated", "PropTemperatureSpawn", function(ent)
+    if ent:IsValid() and ent:IsTemperatureAvaiable() then
+        timer.Simple(0, function()
+            if ent:IsValid() then
+                if ent:GetMaterialType() == MAT_METAL then
+                    ent:SetNW2Bool("IsMetalObject", true)
+                end
 
-        if ent:GetMaterialType() == MAT_METAL then
-            ent:SetNW2Bool("IsMetalObject", true)
-        end
+                if not ent.Temperature then
+                    ent:SetTemperature(normtemp:GetInt())
+                end
+            end
+        end)
     end
 end)
 
