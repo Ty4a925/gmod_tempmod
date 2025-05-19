@@ -51,7 +51,6 @@ duplicator.RegisterEntityModifier("Tempmod_Temperature", function(ply, ent, data
 end)
 
 function meta:SetTemperature(num)
-    self.Temperature = num
     self:SetNW2Int("Temperature", num)
 
     if damageprops:GetBool() and num >= tempfordamage:GetInt() then
@@ -81,7 +80,7 @@ hook.Add("OnEntityCreated", "PropTemperatureSpawn", function(ent)
                     ent:SetNW2Bool("IsMetalObject", true)
                 end
 
-                if not ent.Temperature then
+                if not ent:GetTemperature(false) then
                     ent:SetTemperature(normtemp:GetInt())
                 end
             end
@@ -90,7 +89,7 @@ hook.Add("OnEntityCreated", "PropTemperatureSpawn", function(ent)
 end)
 
 timer.Create("TemperatureMod_Decrease", decreasetime:GetInt(), 0, function()
-    for _, ent in ents.Iterator() do
+    for _, ent in ipairs(ents.FindByClass("prop_physics")) do
         if ent:IsTemperatureAvaiable() then
             local temp = ent:GetTemperature()
 
@@ -113,9 +112,7 @@ end)
 timer.Create("TemperatureMod_Spread", spreadtime:GetInt(), 0, function()
     if not tempspread:GetBool() then return end
 
-    for _, ent in ents.Iterator() do
-        if not ent:IsTemperatureAvaiable() then continue end
-
+    for _, ent in ipairs(ents.FindByClass("prop_physics")) do
         for _, nearent in ipairs(ents.FindInSphere(ent:GetPos(), 75)) do
             if nearent:IsTemperatureAvaiable() and nearent ~= ent then
                 local temp1 = ent:GetTemperature()
@@ -152,12 +149,12 @@ timer.Create("TeamperatureMod_Damage", 1, 0, function()
 end)
 
 hook.Add("EntityTakeDamage", "TemperatureByDamage", function(target, dmginfo)
-    if not target:IsTemperatureAvaiable() then return end
+    if not target:IsTemperatureAvaiable() then
+        local damagetype = dmginfo:GetDamageType()
 
-    local damagetype = dmginfo:GetDamageType()
-
-    if damagetype == DMG_BURN or damagetype == DMG_BLAST then
-        target:SetTemperature(target:GetTemperature() + dmginfo:GetDamage() * 0.5)
+        if damagetype == DMG_BURN or damagetype == DMG_BLAST then
+            target:SetTemperature(target:GetTemperature() + dmginfo:GetDamage() * 0.5)
+        end
     end
 end)
 
